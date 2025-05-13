@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ develop, main ]
   push:
-    branches: [ main ]
+    branches: [ main, 'unofficial/*']
     tags:
       - 'v*'
 
@@ -30,9 +30,6 @@ jobs:
 
       - name: Upload Artifacts
         run: dotnet run --project build/AsepriteDotNet.Build.csproj -- --target=UploadArtifacts
-        env:
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RUNTIME_URL: "${{ env.ACTIONS_RUNTIME_URL }}"
 
   deploy-to-nuget:
     name: Deploy To NuGet
@@ -45,7 +42,7 @@ jobs:
     steps:
       - name: Expose GitHub Runtime
         uses: crazy-max/ghaction-github-runtime@v3
-        
+
       - name: Clone Repository
         uses: actions/checkout@v4
 
@@ -54,9 +51,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Push NuGets
-        run: dotnet run --project build/AsepriteDotNet.Build.csproj -- --target=DeployNuGets
+      - name: Push NuGets To Github
+        run: dotnet run --project build/AsepriteDotNet.Build.csproj -- --target=DeployNugetsToGithub
         env:
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RUNTIME_URL: "${{ env.ACTIONS_RUNTIME_URL }}"
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

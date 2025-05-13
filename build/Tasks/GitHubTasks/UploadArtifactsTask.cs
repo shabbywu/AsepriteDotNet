@@ -1,3 +1,4 @@
+using Cake.Common;
 using Cake.Common.Build;
 using Cake.Core.IO;
 using Cake.Frosting;
@@ -15,8 +16,8 @@ public sealed class UploadArtifactsTask : AsyncFrostingTask<BuildContext>
         DirectoryPath path = context.NuGetsDirectory.FullPath;
         string artifactName = "nugets";
         await context.GitHubActions()
-                     .Commands
-                     .UploadArtifact(path, artifactName)
-                     .ConfigureAwait(true);
+            .Commands
+            .UploadArtifact(path, artifactName)
+            .ConfigureAwait(true);
     }
 }
