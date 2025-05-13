@@ -31,32 +31,8 @@ public static class AsepriteFrameExtensions
             return Array.Empty<Rgba32>();
         }
 
-        Rgba32[] result = new Rgba32[frame.Size.Width * frame.Size.Height];
-        HashSet<string> layerNames = new HashSet<string>(layers);
-        ReadOnlySpan<AsepriteCel> cels = frame.Cels;
-
-        for (int celNum = 0; celNum < cels.Length; celNum++)
-        {
-            AsepriteCel cel = cels[celNum];
-
-            if (!layerNames.Contains(cel.Layer.Name)) { continue; }
-
-            if (cel is AsepriteLinkedCel linkedCel)
-            {
-                cel = linkedCel.Cel;
-            }
-
-            if (cel is AsepriteImageCel imageCel)
-            {
-                BlendCel(result, imageCel.Pixels, imageCel.Layer.BlendMode, new Rectangle(imageCel.Location, imageCel.Size), frame.Size.Width, imageCel.Opacity, imageCel.Layer.Opacity);
-            }
-            else if (cel is AsepriteTilemapCel tilemapCel)
-            {
-                BlendTilemapCel(result, tilemapCel, frame.Size.Width);
-            }
-        }
-
-        return result;
+        HashSet<string> layerNames = layers.ToHashSet();
+        return frame.FlattenFrame(cel => layerNames.Contains(cel.Layer.Name));
     }
 
     /// <summary>
@@ -72,7 +48,52 @@ public static class AsepriteFrameExtensions
     {
         ArgumentNullException.ThrowIfNull(frame);
 
-        List<AsepriteLayer> layers = new List<AsepriteLayer>();
+        return frame.FlattenFrame(cel =>
+        {
+            if (onlyVisibleLayers && !cel.Layer.IsVisible) return false;
+            if (!includeBackgroundLayer && cel.Layer.IsBackgroundLayer) return false;
+            if (!includeTilemapCels && cel is AsepriteTilemapCel) return false;
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// Flattens the a <see cref="AsepriteFrame"/> into an array of <see cref="Rgba32"/> values.
+    /// </summary>
+    /// <param name="frame">The <see cref="AsepriteFrame"/> to flatten.</param>
+    /// <param name="layers">The layers to include</param>
+    /// <returns>
+    /// A array of <see cref="Rgba32"/> value representing the flattened frame.  If <paramref name="layers"/> is
+    /// <see langword="null"/> or contains zero elements, then an empty array is returned.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="frame"/> is <see langword="null"/>.</exception>
+    public static Rgba32[] FlattenFrame(this AsepriteFrame frame, ICollection<AsepriteLayer> layers)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        if (layers is null || layers.Count == 0)
+        {
+            return Array.Empty<Rgba32>();
+        }
+
+        var layerHashCodes = layers.Select(layer => layer.GetHashCode()).ToHashSet();
+        return frame.FlattenFrame(cel => layerHashCodes.Contains(cel.Layer.GetHashCode()));
+    }
+
+    /// <summary>
+    /// Flattens the a <see cref="AsepriteFrame"/> into an array of <see cref="Rgba32"/> values.
+    /// </summary>
+    /// <param name="frame">The <see cref="AsepriteFrame"/> to flatten.</param>
+    /// <param name="filterFunc">The Filter Func to filter some cels to include</param>
+    /// <returns>
+    /// A array of <see cref="Rgba32"/> value representing the flattened frame.  If <paramref name="layers"/> is
+    /// <see langword="null"/> or contains zero elements, then an empty array is returned.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="frame"/> is <see langword="null"/>.</exception>
+    public static Rgba32[] FlattenFrame(this AsepriteFrame frame, Func<AsepriteCel, bool> filterFunc)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+
+        if (filterFunc is null) return Array.Empty<Rgba32>();
 
         Rgba32[] result = new Rgba32[frame.Size.Width * frame.Size.Height];
         ReadOnlySpan<AsepriteCel> cels = frame.Cels;
@@ -81,24 +102,22 @@ public static class AsepriteFrameExtensions
         {
             AsepriteCel cel = cels[celNum];
 
+            if (!filterFunc(cel)) { continue; }
+
             if (cel is AsepriteLinkedCel linkedCel)
             {
                 cel = linkedCel.Cel;
             }
 
-            if (onlyVisibleLayers && !cel.Layer.IsVisible) { continue; }
-            if (cel.Layer.IsBackgroundLayer && !includeBackgroundLayer) { continue; }
-
             if (cel is AsepriteImageCel imageCel)
             {
                 BlendCel(result, imageCel.Pixels, imageCel.Layer.BlendMode, new Rectangle(imageCel.Location, imageCel.Size), frame.Size.Width, imageCel.Opacity, imageCel.Layer.Opacity);
             }
-            else if (includeTilemapCels && cel is AsepriteTilemapCel tilemapCel)
+            else if (cel is AsepriteTilemapCel tilemapCel)
             {
                 BlendTilemapCel(result, tilemapCel, frame.Size.Width);
             }
         }
-
         return result;
     }
 

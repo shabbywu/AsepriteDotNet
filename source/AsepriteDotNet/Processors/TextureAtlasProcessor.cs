@@ -95,16 +95,75 @@ public static class TextureAtlasProcessor
             return TextureAtlas.Empty;
         }
 
-        int frameWidth = file.CanvasWidth;
-        int frameHeight = file.CanvasHeight;
         int frameCount = file.Frames.Length;
-
         Rgba32[][] flattenedFrames = new Rgba32[frameCount][];
 
         for (int i = 0; i < frameCount; i++)
         {
             flattenedFrames[i] = file.Frames[i].FlattenFrame(layers);
         }
+        return Process(file, flattenedFrames, mergeDuplicateFrames, borderPadding, spacing, innerPadding);
+    }
+
+    /// <summary>
+    /// Processes a <see cref="TextureAtlas"/> from an <see cref="AsepriteFile"/>.
+    /// </summary>
+    /// <param name="file">The <see cref="AsepriteFile"/> to process.</param>
+    /// <param name="layers">
+    /// A collection containing the layers to process. Only cels on those layers in
+    /// this collection will be processed.
+    /// </param>
+    /// <param name="mergeDuplicateFrames">Indicates whether duplicates frames should be merged.</param>
+    /// <param name="borderPadding">The amount of transparent pixels to add to the edge of the generated texture.</param>
+    /// <param name="spacing">The amount of transparent pixels to add between each texture region in the generated texture.</param>
+    /// <param name="innerPadding">The amount of transparent pixels to add around the edge of each texture region in the generated texture.</param>
+    /// <returns>
+    /// The <see cref="TextureAtlas"/> created by this method.  If <paramref name="layers"/> is empty or contains zero
+    /// elements, then <see cref="TextureAtlas.Empty"/> is returned.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null"/>.</exception>
+    public static TextureAtlas Process(AsepriteFile file, ICollection<AsepriteLayer> layers, bool mergeDuplicateFrames = true, int borderPadding = 0, int spacing = 0, int innerPadding = 0)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        if(layers is null || layers.Count == 0)
+        {
+            return TextureAtlas.Empty;
+        }
+
+        int frameCount = file.Frames.Length;
+        Rgba32[][] flattenedFrames = new Rgba32[frameCount][];
+
+        for (int i = 0; i < frameCount; i++)
+        {
+            flattenedFrames[i] = file.Frames[i].FlattenFrame(layers);
+        }
+        return Process(file, flattenedFrames, mergeDuplicateFrames, borderPadding, spacing, innerPadding);
+    }
+
+    /// <summary>
+    /// Processing a <see cref="TextureAtlas"/> from an <see cref="AsepriteFile"/>.
+    /// </summary>
+    /// <param name="file">The <see cref="AsepriteFile"/> to process.</param>
+    /// <param name="flattenedFrames">
+    /// A collection of frames that selected layers have been flattened into.
+    /// </param>
+    /// <param name="mergeDuplicateFrames">Indicates whether duplicates frames should be merged.</param>
+    /// <param name="borderPadding">The amount of transparent pixels to add to the edge of the generated texture.</param>
+    /// <param name="spacing">The amount of transparent pixels to add between each texture region in the generated texture.</param>
+    /// <param name="innerPadding">The amount of transparent pixels to add around the edge of each texture region in the generated texture.</param>
+    /// <returns>
+    /// The <see cref="TextureAtlas"/> created by this method.  If <paramref name="layers"/> is empty or contains zero
+    /// elements, then <see cref="TextureAtlas.Empty"/> is returned.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null"/>.</exception>
+    private static TextureAtlas Process(AsepriteFile file, Rgba32[][] flattenedFrames, bool mergeDuplicateFrames = true, int borderPadding = 0, int spacing = 0, int innerPadding = 0)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        int frameWidth = file.CanvasWidth;
+        int frameHeight = file.CanvasHeight;
+        int frameCount = file.Frames.Length;
 
         Dictionary<int, int> duplicateMap = new Dictionary<int, int>();
         Dictionary<int, TextureRegion> originalToDuplicateLookup = new Dictionary<int, TextureRegion>();
